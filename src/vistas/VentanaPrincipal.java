@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 
 public class VentanaPrincipal extends JFrame implements ActionListener{
     
@@ -17,24 +19,6 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
     private JTextArea msgClaro;
     private JButton ocultar;
     private JButton mostrar;
-
-
-
-    /*
-    |-------------------
-    |Imagen|   Abrir    |
-    |------|------------|
-    |LLave |            |
-    |------|------------|
-    |[Imagen]|          |
-    |      |            |
-    |      |            |
-    |      |            |
-    |      |            |
-    |-------------------
-    */
- 
- 
 
     public VentanaPrincipal(){
 
@@ -143,9 +127,6 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         gridCons.anchor = GridBagConstraints.NORTHEAST;
         this.add(mostrar,gridCons);
 
-
-
-        
         
         this.setVisible(true);
         
@@ -157,7 +138,51 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         chooser.showOpenDialog(botonBuscar);
         File archivo = chooser.getSelectedFile();
         botonBuscar.setText(archivo.getName());
+        try {
+            BufferedImage imagen = ImageIO.read(archivo);
+            byte[] res = imagenABytes(imagen);
+            //
+            msgClaro.setText(
+                "Altura: " + imagen.getHeight() +
+                "\nAnchura: " + imagen.getWidth() +
+                "\nRgb: " + imagen.getRGB(0,0) +
+                "\nTipo: " + imagen.getType() +
+                "\nBits que se pueden ocultar: " + ( imagen.getHeight() * imagen.getWidth() * 3) +
+                "\nBytes que se pueden ocultar: " + ( (imagen.getHeight() * imagen.getWidth() * 3) / 8)
+            );
+        } catch (Exception e) {}
     }
 
+    public byte[] imagenABytes(BufferedImage bImagen) {
+        int alto = bImagen.getHeight();
+        int ancho = bImagen.getWidth();
+        //int  imagen.getRGB(0,0) +
+        ArrayList<byte> arreglo = new ArrayList();
+        for (int i = 0; i < ancho; i++) {
+            for (int j = 0; j < alto; j++) {
+                int pixel = bImagen.getRGB(i, j);
+                obtenerLongitudPixel(arreglo, pixel, imagen.getType());
+            }
+        }
+        return null;
+    }
 
+    public  void obtenerLongitudPixel(ArrayList<byte> arreglo, int pixel, int tipo) {
+        // 1 byte por pixel
+        if (tipo == ImageIO.TYPE_INT_RGB ||
+            tipo == ImageIO.TYPE_INT_BGR ||
+            tipo == ImageIO.TYPE_INT_ARGB_PRE ||
+            tipo == ImageIO.TYPE_INT_ARGB) {
+            arreglo.add((byte)pixel);
+        }
+        // 3 byte por pixel
+        if (tipo == ImageIO.TYPE_3BYTE_BGR) {
+            arreglo.add((byte)pixel);
+        }
+        // 4 byte por pixel
+        if (tipo == ImageIO.TYPE_4BYTE_ABGR ||
+            tipo == ImageIO.TYPE_4BYTE_ABGR_PRE) {
+            arreglo.add((byte)pixel);   
+        }
+    }
 }
