@@ -1,11 +1,17 @@
 package vistas;
 
 import javax.swing.*;
+
+import lsb.StringLSB;
+import des.StringDES;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.util.*;
+import java.util.function.IntFunction;
 
 public class VentanaPrincipal extends JFrame implements ActionListener{
     
@@ -19,6 +25,9 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
     private JTextArea msgClaro;
     private JButton ocultar;
     private JButton mostrar;
+    private File archivo;
+    private String msgClaroTexto;
+    private BufferedImage imagenOriginal;
 
     public VentanaPrincipal(){
 
@@ -105,6 +114,7 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         this.add(msgClaro,gridCons);
 
         ocultar = new JButton("Ocultar");
+        ocultar.addActionListener(this);
         gridCons.gridx = 1;
         gridCons.gridy = 3;                  
         gridCons.gridwidth = 1;
@@ -117,6 +127,7 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
 
 
         mostrar = new JButton("Mostrar");
+        mostrar.addActionListener(this);
         gridCons.gridx = 2;
         gridCons.gridy = 3;                  
         gridCons.gridwidth = 1;
@@ -134,55 +145,93 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
     }
 
     public void actionPerformed(ActionEvent evento){
-        JFileChooser chooser = new JFileChooser();
-        chooser.showOpenDialog(botonBuscar);
-        File archivo = chooser.getSelectedFile();
-        botonBuscar.setText(archivo.getName());
-        try {
-            BufferedImage imagen = ImageIO.read(archivo);
-            byte[] res = imagenABytes(imagen);
-            //
-            msgClaro.setText(
-                "Altura: " + imagen.getHeight() +
-                "\nAnchura: " + imagen.getWidth() +
-                "\nRgb: " + imagen.getRGB(0,0) +
-                "\nTipo: " + imagen.getType() +
-                "\nBits que se pueden ocultar: " + ( imagen.getHeight() * imagen.getWidth() * 3) +
-                "\nBytes que se pueden ocultar: " + ( (imagen.getHeight() * imagen.getWidth() * 3) / 8)
-            );
-        } catch (Exception e) {}
+        if (evento.getSource() == botonBuscar) {
+            // Abrir archivo
+            JFileChooser chooser = new JFileChooser();
+            chooser.showOpenDialog(botonBuscar);
+            archivo = chooser.getSelectedFile();
+            botonBuscar.setText(archivo.getName());
+            try {
+                imagenOriginal = ImageIO.read(archivo);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (evento.getSource() == ocultar) {
+            try {
+                msgClaroTexto = msgClaro.getText();
+                // Empieza cifrado
+                String text = msgClaroTexto; 
+                String key = texto.getText(); 
+        
+                StringDES cipher = new StringDES(); 
+                text = cipher.encrypt(textoAHexadecimal(text), textoAHexadecimal(key)); 
+                // Termina cifrado
+                int[] res = imagenABytes(imagenOriginal);
+                StringLSB prueba = new StringLSB(res, text);
+                if (prueba.siCabe()) {
+                    File copia = new File(archivo.getParentFile(), "prueba-lsb.bmp");
+                    int[] pixeles = prueba.ocultarBytesConLSB();
+                    BufferedImage buffer = new BufferedImage(imagenOriginal.getWidth(), imagenOriginal.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+                    buffer.setRGB(0, 0, imagenOriginal.getWidth(), imagenOriginal.getHeight(), pixeles, 0, imagenOriginal.getWidth());
+                    ImageIO.write(buffer, "bmp", copia);
+                    System.out.println("TERMINADO");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (evento.getSource() == mostrar) {
+            try {
+                int[] res = imagenABytes(imagenOriginal);
+                System.out.println("Imagen en Arreglo");
+                StringLSB prueba = new StringLSB(res, msgClaroTexto);
+                System.out.println("Probando logitud de cadena");
+                // Empieza descifrado
+                StringDES cipher = new StringDES();
+                String text = hexToAscii(cipher.decrypt(prueba.mostrarBytesConLSB(), textoAHexadecimal(texto.getText())));
+                // Termina descifrado
+                msgClaro.setText(text);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    public byte[] imagenABytes(BufferedImage bImagen) {
+    private int[] imagenABytes(BufferedImage bImagen) {
         int alto = bImagen.getHeight();
         int ancho = bImagen.getWidth();
         //int  imagen.getRGB(0,0) +
-        ArrayList<byte> arreglo = new ArrayList();
-        for (int i = 0; i < ancho; i++) {
-            for (int j = 0; j < alto; j++) {
-                int pixel = bImagen.getRGB(i, j);
-                obtenerLongitudPixel(arreglo, pixel, imagen.getType());
+        int[] datos = new int[alto * ancho];
+        for (int i = 0; i < alto; i++) {
+            for (int j = 0; j < ancho; j++) {
+                int pixel = bImagen.getRGB(j, i);
+                datos[ancho * i + j] = pixel;
             }
         }
-        return null;
+        return datos;
     }
 
-    public  void obtenerLongitudPixel(ArrayList<byte> arreglo, int pixel, int tipo) {
-        // 1 byte por pixel
-        if (tipo == ImageIO.TYPE_INT_RGB ||
-            tipo == ImageIO.TYPE_INT_BGR ||
-            tipo == ImageIO.TYPE_INT_ARGB_PRE ||
-            tipo == ImageIO.TYPE_INT_ARGB) {
-            arreglo.add((byte)pixel);
+    private String textoAHexadecimal(String texto) {
+        String hexadecimal = "";
+        for (int i = 0; i < texto.length(); i++) {
+            hexadecimal += Integer.toHexString(texto.charAt(i));
         }
-        // 3 byte por pixel
-        if (tipo == ImageIO.TYPE_3BYTE_BGR) {
-            arreglo.add((byte)pixel);
+        return hexadecimal;
+    }
+
+    private String hexToAscii(String hexStr) {
+        StringBuilder output = new StringBuilder("");
+         
+        for (int i = 0; i < hexStr.length(); i += 2) {
+            String str = hexStr.substring(i, i + 2);
+            output.append((char) Integer.parseInt(str, 16));
         }
-        // 4 byte por pixel
-        if (tipo == ImageIO.TYPE_4BYTE_ABGR ||
-            tipo == ImageIO.TYPE_4BYTE_ABGR_PRE) {
-            arreglo.add((byte)pixel);   
-        }
+         
+        return output.toString();
     }
 }
+
+
+
+
