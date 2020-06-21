@@ -9,6 +9,17 @@
 
 - `ant run`
 
+## Como correr el jar
+
+  ```bash
+  bodhi@yasmin:~/Desktop/ProyectoCripto/esteganografia/build/jar$ java -jar Application.jar 
+
+  ```
+
+## Como crer un ejecutable 
+
+- `ant jar`
+
 ## Steganografia
 
 ```

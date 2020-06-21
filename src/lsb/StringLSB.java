@@ -5,66 +5,31 @@ import java.util.Arrays;
 public class StringLSB {
 
     private int[] datos; //datos de bytes
-    private String mensaje;
+    private int[] mensajeEnBits;
 
-    public StringLSB(int[] datos, String mensaje) {
+
+    public StringLSB(int[] datos, int[] mensaje) {
         this.datos = datos;
-        this.mensaje = mensaje;
+        this.mensajeEnBits = mensaje;
     }
 
     public boolean siCabe() {
-        return true || (datos.length / 8) <= mensaje.length();
+        return true || (datos.length / 8) <= mensajeEnBits.length;
     }
 
-    public int[] obtenerBytesMensajes(){
-        /**
-         * "B        r        e        n        d        a"
-         *  01011010 01010010 01111010 01011011 01011011 01011011
-         * bitsBandera: 00000110
-         */
-        int[] bitsMensaje = new int[mensaje.length() * 8 + 8];
-        int longitudMensaje = mensaje.length();
-        String bitsBandera = Integer.toBinaryString(longitudMensaje);
-        int indiceBitsMensaje = 0;
-        // Rellenar primer byte con bandera de numero de caracteres
-        for (int n = 0; n < 8 - bitsBandera.length(); n ++) {
-            bitsMensaje[indiceBitsMensaje] = 0;
-            indiceBitsMensaje ++;
-        }
-        for (int i = 0; i < bitsBandera.length(); i ++){
-            bitsMensaje[indiceBitsMensaje] = Integer.parseInt(bitsBandera.substring(i, i + 1));
-            indiceBitsMensaje ++;
-        }
-        // Rellenar desde segundo byte el mensaje a ocultar
-        for (int i=0; i < mensaje.length(); i ++){
-            String binario = Integer.toBinaryString(mensaje.charAt(i));
-            for (int n = 0; n < 8 - binario.length(); n ++) {
-                bitsMensaje[indiceBitsMensaje] = 0;
-                indiceBitsMensaje ++;
-            }
-            for (int j=0; j < binario.length(); j ++) {
-                bitsMensaje[indiceBitsMensaje] = Integer.parseInt(binario.substring(j, j + 1));
-                indiceBitsMensaje ++;
-            }
-        }
-        return bitsMensaje;
-    }
 
-    /**
-     * Proceso completo de ocultamiento
-     */
     public int[] ocultarBytesConLSB() {
         // Obtener longitud del mensaje
-        int longitudMensaje = mensaje.length();
+        int longitudMensaje = mensajeEnBits.length;
         // Escribir la bandera en un byte
         int[] bandera = generarBandera(longitudMensaje);
         escribirBanders(bandera, datos);
-        System.out.printf("Bandera: %d, binario: %s, Mensaje a escribir: %s\n", longitudMensaje, Arrays.toString(bandera), mensaje);
+        System.out.printf("##### LSB Bandera: %d, binario: %s, Mensaje a escribir: %s\n", longitudMensaje, Arrays.toString(bandera), mensajeEnBits);
         // Escribir el mensaje
         for (int i = 0; i < longitudMensaje; i++){
             // Generar indice de escritura para cada caracter
             int indice = 8 + (i * 8);
-            escribirCaracterUnico(mensaje.charAt(i), datos, indice);
+            escribirCaracterUnico(mensajeEnBits[i], datos, indice);
         }
         return datos;
     }
@@ -97,31 +62,27 @@ public class StringLSB {
      * y escribe los 8 bits del caracter en el
      * arreglo datos a partir del indice dado.
      */
-    private void escribirCaracterUnico(char caracter, int[] datos, int indice) {
+    private void escribirCaracterUnico(int caracter, int[] datos, int indice) {
         int[] bitsCaracter = generarBitsCaracter(caracter);
-        System.out.printf("@@@@@@ Posicion: %3d, Caracter Escrito: '%s', Byte escrito: %s\n", indice, caracter, Arrays.toString(bitsCaracter));
+        System.out.printf("##### LSB Posicion: %3d, Caracter Escrito: '%s', Byte escrito: %s\n", indice, caracter, Arrays.toString(bitsCaracter));
         for (int i = 0; i < 8; i ++) {
             datos[indice + i] = bitMenosSignificativo(datos[indice + i], bitsCaracter[i]);
         }
     }
-    private int[] generarBitsCaracter(char caracter) {
-        String binario = Integer.toBinaryString(caracter);
-        // Rellenar con ceros a la izquierda
-        for (int i = 0; i < 9 - binario.length(); i++) {
-            binario = "0" + binario;
-        }
+    private int[] generarBitsCaracter(int caracter) {
         // Extraer cada caracter y guardarlo como entero en el arreglo a retornar
         int[] bitsCaracter = new int[8];
         for (int i = 0; i < 8; i++) {
-            bitsCaracter[i] = Integer.parseInt(binario.substring(i, i + 1));
+            bitsCaracter[bitsCaracter.length - i - 1] = caracter >> i & 1;
         }
+        System.out.printf("##### LSB Caracter escrito %s\n", Arrays.toString(bitsCaracter));
         return bitsCaracter;
     }
 
     /**
      * Proceso completo de lectura de mensaje.
      */
-    public String mostrarBytesConLSB() {
+    public String mostrarStringConLSB() {
         // Leer la bandera en el LSB de los primeros 8 pixeles y guardarla como un entero: logitudMensaje
         int longitudMensaje = leerBandera(datos);
         System.out.printf(">>>>>> Bandera: %d\n", longitudMensaje);
@@ -136,10 +97,25 @@ public class StringLSB {
         }
         return mensaje;
     }
+    public int[] mostrarBytesConLSB() {
+        // Leer la bandera en el LSB de los primeros 8 pixeles y guardarla como un entero: logitudMensaje
+        int longitudMensaje = leerBandera(datos);
+        System.out.printf("##### LSB Bandera: %d\n", longitudMensaje);
+        // Leer el LSB de cada pixel a partir del 9no, en total longitudMensaje * 8
+        int[] mensaje = new int[longitudMensaje];
+        for (int i = 0; i < longitudMensaje; i++){
+            // Generar indice de escritura para cada caracter
+            int indice = 8 + (i * 8);
+            int caracter = leerInt(datos, indice);
+            System.out.printf("##### LSB Caracter: %s %d\n", caracter, caracter);
+            mensaje[i] = caracter;
+        }
+        return mensaje;
+    }
 
     private int leerBandera(int[] datos) {
         int banderaLogitud = 0;
-        System.out.printf(">>>>> Leyendo Bandera: ");
+        System.out.printf("##### LSB Leyendo Bandera: ");
         for (int i = 0; i < 8; i++) {
             String binario = Integer.toBinaryString(datos[i]);
             int unBit = Integer.parseInt(binario.substring(binario.length() - 1, binario.length()));
@@ -174,6 +150,18 @@ public class StringLSB {
         return caracter;
     }
 
+    private int leerInt(int[] datos, int indice) {
+        // Crea un String con el numero binario de 8 bits que representa un caracter
+        String bin = "";
+        for (int i = 0; i < 8; i++){
+            String binario = Integer.toBinaryString(datos[indice + i]);
+            int unBit = Integer.parseInt(binario.substring(binario.length() - 1, binario.length()));
+            bin += unBit;
+        }
+        // Parsea la cadena a un entero y lo convierte a caracter en base a la tabla ASCCI
+        return Integer.parseInt(bin,2);
+    }
+
 
     /**
      * Tomando la numeracion binaria:
@@ -197,5 +185,3 @@ public class StringLSB {
     }
     
 }
-
-

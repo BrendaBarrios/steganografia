@@ -1,30 +1,25 @@
 package vistas;
-
 import javax.swing.*;
-
 import lsb.StringLSB;
-import des.StringDES;
-
+import rc4.AlgoritmoRc4;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.util.*;
-import java.util.function.IntFunction;
 
 public class VentanaPrincipal extends JFrame implements ActionListener{
     
     private JLabel titulo;
     private JButton botonBuscar;
+    private JButton ocultar;
+    private JButton mostrar;
     private JTextField cajaTexto;
     private JTextField texto;
     private JLabel etiquetaLlave;
     private JLabel etiquetaMsgClaro;
     private JPanel panel;
     private JTextArea msgClaro;
-    private JButton ocultar;
-    private JButton mostrar;
     private File archivo;
     private String msgClaroTexto;
     private BufferedImage imagenOriginal;
@@ -42,11 +37,11 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         GridBagConstraints   gridCons = new GridBagConstraints();
        
 
+        // Label para colocar la etiqueta imagen
         titulo = new JLabel("Imagen:", JLabel.RIGHT);
         gridCons.gridx = 0 ;
         gridCons.gridy = 0 ;                  
         gridCons.gridwidth = 1;
-        //gridCons.weighty = 1;
         gridCons.gridheight = 1;
         gridCons.fill = GridBagConstraints.HORIZONTAL;
         gridCons.anchor = GridBagConstraints.NORTHEAST;
@@ -56,7 +51,7 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         this.add(titulo,gridCons);
         
        
-
+        // Boton para buscar la imagen
         botonBuscar = new JButton("Buscar");
         botonBuscar.addActionListener(this);
         gridCons.gridx = 1;
@@ -66,7 +61,8 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         gridCons.weightx = 1;
         this.add(botonBuscar,gridCons);
         gridCons.weightx = 0;
-                                                        
+                                        
+        // Etiqueta para la llave.
         etiquetaLlave = new JLabel("Llave:",JLabel.RIGHT);
         gridCons.gridx = 0 ;
         gridCons.gridy = 1 ;                  
@@ -77,7 +73,7 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         gridCons.anchor = GridBagConstraints.NORTHEAST;
         this.add(etiquetaLlave,gridCons);
 
-
+        // Caja para el texto de la llave
         texto = new JTextField();
         gridCons.gridx = 1;
         gridCons.gridy = 1;
@@ -87,9 +83,8 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         this.add(texto,gridCons);
         gridCons.weightx = 0;
 
-        // Otro elemento
-
-        etiquetaLlave = new JLabel("Mensaje:",JLabel.RIGHT);
+        // Etiqueta para la llave 
+        etiquetaMsgClaro = new JLabel("Mensaje:",JLabel.RIGHT);
         gridCons.gridx = 0 ;
         gridCons.gridy = 2 ;                  
         gridCons.gridwidth = 1;
@@ -97,10 +92,10 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         gridCons.gridheight = 1;
         gridCons.fill = GridBagConstraints.HORIZONTAL;
         gridCons.anchor = GridBagConstraints.NORTHEAST;
-        this.add(etiquetaLlave,gridCons);
+        this.add(etiquetaMsgClaro,gridCons);
 
-        //AQUI
-
+        
+        // Caja de texto para colocar el mensje.
         msgClaro = new JTextArea();
         gridCons.gridx = 1 ;
         gridCons.gridy = 2 ;                  
@@ -113,7 +108,8 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         msgClaro.setCaretColor(Color.ORANGE);
         this.add(msgClaro,gridCons);
 
-        ocultar = new JButton("Ocultar");
+        // Mensaje para cifrar
+        ocultar = new JButton("Cifrar");
         ocultar.addActionListener(this);
         gridCons.gridx = 1;
         gridCons.gridy = 3;                  
@@ -125,8 +121,8 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         gridCons.anchor = GridBagConstraints.NORTHEAST;
         this.add(ocultar,gridCons);
 
-
-        mostrar = new JButton("Mostrar");
+        // Boton para decifrar mensaje
+        mostrar = new JButton("Descifrar");
         mostrar.addActionListener(this);
         gridCons.gridx = 2;
         gridCons.gridy = 3;                  
@@ -144,6 +140,7 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
 
     }
 
+    // Evento para el boton cifrar y descifrar asi como las acciones y metodos a ejecutar.
     public void actionPerformed(ActionEvent evento){
         if (evento.getSource() == botonBuscar) {
             // Abrir archivo
@@ -159,18 +156,29 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         }
         if (evento.getSource() == ocultar) {
             try {
-                msgClaroTexto = msgClaro.getText();
+
                 // Empieza cifrado
-                String text = msgClaroTexto; 
-                String key = texto.getText(); 
-        
-                StringDES cipher = new StringDES(); 
-                text = cipher.encrypt(textoAHexadecimal(text), textoAHexadecimal(key)); 
+                AlgoritmoRc4 cifrarRc4 = new AlgoritmoRc4(); 
+                String msg = msgClaro.getText();
+                String llave = texto.getText();
+                int[] bitsMsg = AlgoritmoRc4.textoABinario(msg);
+                System.out.println("\nSin cifrar");
+                for (int i = 0; i < bitsMsg.length; i++) {
+                    System.out.print("." + bitsMsg[i]);
+                }
+                int[] bitsLlave = AlgoritmoRc4.obtenerKey(llave);
+                int[] resultCifrado= cifrarRc4.cifrarTexto(bitsMsg, bitsLlave);
+                if (resultCifrado == null){
+                    msgClaro.setText(" Verifica que la clave sea de 5 a 32 bytes");
+                    return;
+                }
+               
                 // Termina cifrado
+
                 int[] res = imagenABytes(imagenOriginal);
-                StringLSB prueba = new StringLSB(res, text);
+                StringLSB prueba = new StringLSB(res, resultCifrado);
                 if (prueba.siCabe()) {
-                    File copia = new File(archivo.getParentFile(), "prueba-lsb.bmp");
+                    File copia = new File(archivo.getParentFile(), "imgen-msg-oculto-cifrada.bmp");
                     int[] pixeles = prueba.ocultarBytesConLSB();
                     BufferedImage buffer = new BufferedImage(imagenOriginal.getWidth(), imagenOriginal.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
                     buffer.setRGB(0, 0, imagenOriginal.getWidth(), imagenOriginal.getHeight(), pixeles, 0, imagenOriginal.getWidth());
@@ -181,23 +189,51 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
                 e.printStackTrace();
             }
         }
+        // Evento para descifrar y ver mensaje.
         if (evento.getSource() == mostrar) {
             try {
+                AlgoritmoRc4 cifrarRc4 = new AlgoritmoRc4(); 
                 int[] res = imagenABytes(imagenOriginal);
                 System.out.println("Imagen en Arreglo");
-                StringLSB prueba = new StringLSB(res, msgClaroTexto);
+                StringLSB prueba = new StringLSB(res, new int[0]);
                 System.out.println("Probando logitud de cadena");
+
                 // Empieza descifrado
-                StringDES cipher = new StringDES();
-                String text = hexToAscii(cipher.decrypt(prueba.mostrarBytesConLSB(), textoAHexadecimal(texto.getText())));
+                int[] textoCifrado = prueba.mostrarBytesConLSB();
+                for (int i = 0; i < textoCifrado.length; i++) {
+                    System.out.print("." + textoCifrado[i]);
+                }
+                System.out.println();
+                String textoLlave = texto.getText();
+                System.out.println(textoCifrado);
+                System.out.println();
+                int[] bitsKey = AlgoritmoRc4.obtenerKey(textoLlave);
+                int[] bitsDescifrarMsg = cifrarRc4.cifrarTexto(textoCifrado, bitsKey);
+                if (bitsDescifrarMsg == null){
+                    msgClaro.setText(" Verifica que la clave sea de 5 a 32 bytes");
+                    return;
+                }
+                for (int i = 0; i < bitsDescifrarMsg.length; i++) {
+                    System.out.print("." + bitsDescifrarMsg[i]);
+                }
+                System.out.println();
+                String resultado = AlgoritmoRc4.binarioATexto(bitsDescifrarMsg);
+                
+               
+               
+                msgClaro.setText(resultado);
                 // Termina descifrado
-                msgClaro.setText(text);
+
+                //Llave 6 = 00000110
+                //01000010 01110010 01100101 01101110 01100100 01100001 - Mensaje (Brenda)
+                
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
+    // Convertir la imagen a los bytes que contiene.
     private int[] imagenABytes(BufferedImage bImagen) {
         int alto = bImagen.getHeight();
         int ancho = bImagen.getWidth();
@@ -211,27 +247,5 @@ public class VentanaPrincipal extends JFrame implements ActionListener{
         }
         return datos;
     }
-
-    private String textoAHexadecimal(String texto) {
-        String hexadecimal = "";
-        for (int i = 0; i < texto.length(); i++) {
-            hexadecimal += Integer.toHexString(texto.charAt(i));
-        }
-        return hexadecimal;
-    }
-
-    private String hexToAscii(String hexStr) {
-        StringBuilder output = new StringBuilder("");
-         
-        for (int i = 0; i < hexStr.length(); i += 2) {
-            String str = hexStr.substring(i, i + 2);
-            output.append((char) Integer.parseInt(str, 16));
-        }
-         
-        return output.toString();
-    }
 }
-
-
-
 
